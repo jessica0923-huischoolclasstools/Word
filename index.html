@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WORD DASH - 紅藍雙隊單字大挑戰</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #ffffff;
+      color: #1e293b;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .font-display {
+      font-family: 'Fredoka', 'Inter', sans-serif;
+    }
+    @keyframes popIn {
+      0% { transform: scale(0.75); opacity: 0; }
+      70% { transform: scale(1.05); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes floatScore {
+      0% { transform: translateY(0) scale(1); opacity: 1; }
+      100% { transform: translateY(-40px) scale(1.25); opacity: 0; }
+    }
+    @keyframes pulseBorder {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+      50% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+    }
+    .animate-pop {
+      animation: popIn 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+    .float-feedback {
+      position: absolute;
+      pointer-events: none;
+      font-weight: 800;
+      font-size: 1.35rem;
+      z-index: 40;
+      animation: floatScore 0.75s ease-out forwards;
+      text-shadow: 0 2px 4px rgba(255,255,255,0.9);
+    }
+    .falling-item {
+      position: absolute;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      transition: transform 0.1s ease, filter 0.1s ease;
+      z-index: 20;
+      touch-action: manipulation;
+    }
+    .falling-item:active {
+      transform: scale(0.9) !important;
+    }
+    .bubble-blue {
+      background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+      color: #ffffff;
+      border: 3px solid #93c5fd;
+      box-shadow: 0 6px 14px rgba(37, 99, 235, 0.28);
+    }
+    .bubble-red {
+      background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
+      color: #ffffff;
+      border: 3px solid #fca5a5;
+      box-shadow: 0 6px 14px rgba(220, 38, 38, 0.28);
+    }
+    .bubble-star {
+      background: radial-gradient(circle at 35% 35%, #fef08a, #f59e0b);
+      border: 3px solid #fde047;
+      box-shadow: 0 6px 16px rgba(245, 158, 11, 0.35);
+      color: #78350f;
+    }
+    .bubble-bomb {
+      background: radial-gradient(circle at 35% 35%, #475569, #1e293b);
+      border: 3px solid #f87171;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.32);
+      color: #ffffff;
+    }
+    .slot-box {
+      min-width: 2.2rem;
+      height: 2.5rem;
+      padding: 0 0.45rem;
+      border-radius: 0.5rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.15rem;
+      transition: all 0.2s ease;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-white text-slate-800 select-none">
+
+  <!-- TOP HEADER BAR -->
+  <header class="w-full bg-white border-b-2 border-slate-200 px-3 py-2 shrink-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto flex flex-col gap-1.5">
+      <!-- Top Title & Target Word Display -->
+      <div class="flex items-center justify-center gap-2 text-xs sm:text-sm font-extrabold tracking-wider text-amber-600 uppercase">
+        <span>🎯 TARGET VOCABULARY 目標單字 🎯</span>
+      </div>
+
+      <!-- Split Target Box for Blue Team & Red Team -->
+      <div class="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-3 py-2 grid grid-cols-2 divide-x-2 divide-slate-300 shadow-inner">
+        <!-- Blue Team Target -->
+        <div class="flex items-center justify-center gap-2 pr-2 overflow-hidden">
+          <span class="px-2 py-0.5 text-xs font-extrabold rounded bg-blue-600 text-white shrink-0">藍隊 BLUE</span>
+          <div class="flex items-baseline gap-2 truncate">
+            <span id="topTargetBlue" class="font-display text-lg sm:text-2xl font-extrabold text-blue-700 tracking-wide truncate">apple</span>
+            <span id="topHintBlue" class="text-xs sm:text-sm font-bold text-slate-500 truncate">(蘋果)</span>
+          </div>
+        </div>
+        <!-- Red Team Target -->
+        <div class="flex items-center justify-center gap-2 pl-2 overflow-hidden">
+          <span class="px-2 py-0.5 text-xs font-extrabold rounded bg-red-600 text-white shrink-0">紅隊 RED</span>
+          <div class="flex items-baseline gap-2 truncate">
+            <span id="topTargetRed" class="font-display text-lg sm:text-2xl font-extrabold text-red-600 tracking-wide truncate">apple</span>
+            <span id="topHintRed" class="text-xs sm:text-sm font-bold text-slate-500 truncate">(蘋果)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mode, Controls & Timer Bar -->
+      <div class="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs sm:text-sm font-extrabold text-sky-700 bg-sky-50 border border-sky-200 px-2.5 py-1 rounded-lg">
+            MODE: <span id="currentModeLabel" class="font-bold text-slate-700">單字拼字對戰 (Spelling Dash)</span>
+          </span>
+          <button id="openUploadModalBtn" type="button" class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-1 rounded-lg transition">
+            <span>📂 上傳/編輯題目</span>
+          </button>
+          <button id="openHomeModalBtn" type="button" class="inline-flex items-center gap-1 text-xs sm:text-sm font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 px-2.5 py-1 rounded-lg transition">
+            <span>⚙️ 設定/規則</span>
+          </button>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button id="muteToggleBtn" type="button" class="text-xs sm:text-sm font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 px-2.5 py-1 rounded-lg transition" title="切換音效">
+            🔊 音效: 開
+          </button>
+          <div class="inline-flex items-center gap-1.5 bg-amber-50 border-2 border-amber-400 text-amber-800 px-3.5 py-1 rounded-full font-display font-extrabold text-sm sm:text-base shadow-sm">
+            <span>⏱️ TIME:</span>
+            <span id="timerDisplay" class="text-amber-600 text-base sm:text-lg">60s</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN SPLIT BATTLE ARENA (White Background) -->
+  <main class="relative flex-1 w-full grid grid-cols-2 divide-x-2 divide-slate-200 bg-white overflow-hidden">
+    
+    <!-- LEFT LANE: BLUE TEAM -->
+    <section id="laneBlue" class="relative w-full h-full bg-white overflow-hidden flex flex-col justify-between">
+      <!-- Subtle top team indicator strip -->
+      <div class="h-1.5 w-full bg-blue-500 shrink-0"></div>
+
+      <!-- Top HUD inside Blue Lane -->
+      <div class="flex items-start justify-between px-3 sm:px-5 pt-3 z-20 pointer-events-none">
+        <div class="bg-blue-600 text-white px-3.5 py-2 rounded-2xl shadow-md border-2 border-blue-400">
+          <div class="flex items-center gap-1.5 text-[11px] sm:text-xs font-extrabold uppercase tracking-wider opacity-95">
+            <span>BLUE TEAM 藍隊</span>
+            <span class="inline-block w-2.5 h-2.5 rounded-sm bg-blue-200 border border-white"></span>
+          </div>
+          <div class="font-display text-xl sm:text-3xl font-extrabold leading-tight">
+            <span id="scoreBlue">0</span> <span class="text-sm sm:text-lg">pts</span>
+          </div>
+        </div>
+
+        <div class="bg-blue-50 text-blue-800 border-2 border-blue-200 px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm shadow-sm">
+          完成單字: <span id="solvedBlue" class="font-extrabold text-blue-600">0</span>/<span id="totalWordsBlue">8</span>
+        </div>
+      </div>
+
+      <!-- Falling Canvas Area for Blue Team -->
+      <div id="fallAreaBlue" class="relative flex-1 w-full overflow-hidden"></div>
+
+      <!-- Bottom Progress Dock for Blue Team -->
+      <div class="px-3 sm:px-6 pb-3 pt-1 z-20">
+        <div class="bg-white/95 border-2 border-blue-400 rounded-2xl px-3 py-2.5 shadow-md flex flex-col items-center justify-center min-h-[78px]">
+          <div class="text-[11px] sm:text-xs font-extrabold text-blue-600 tracking-wider uppercase mb-1.5">
+            BLUE TEAM WORD PROGRESS 藍隊進度 (<span id="hintLabelBlue" class="text-slate-600">蘋果</span>):
+          </div>
+          <div id="slotsBlue" class="flex flex-wrap items-center justify-center gap-1.5"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT LANE: RED TEAM -->
+    <section id="laneRed" class="relative w-full h-full bg-white overflow-hidden flex flex-col justify-between">
+      <!-- Subtle top team indicator strip -->
+      <div class="h-1.5 w-full bg-red-500 shrink-0"></div>
+
+      <!-- Top HUD inside Red Lane -->
+      <div class="flex items-start justify-between px-3 sm:px-5 pt-3 z-20 pointer-events-none">
+        <div class="bg-red-600 text-white px-3.5 py-2 rounded-2xl shadow-md border-2 border-red-400">
+          <div class="flex items-center gap-1.5 text-[11px] sm:text-xs font-extrabold uppercase tracking-wider opacity-95">
+            <span>RED TEAM 紅隊</span>
+            <span class="inline-block w-2.5 h-2.5 rounded-sm bg-red-200 border border-white"></span>
+          </div>
+          <div class="font-display text-xl sm:text-3xl font-extrabold leading-tight">
+            <span id="scoreRed">0</span> <span class="text-sm sm:text-lg">pts</span>
+          </div>
+        </div>
+
+        <div class="bg-red-50 text-red-800 border-2 border-red-200 px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm shadow-sm">
+          完成單字: <span id="solvedRed" class="font-extrabold text-red-600">0</span>/<span id="totalWordsRed">8</span>
+        </div>
+      </div>
+
+      <!-- Falling Canvas Area for Red Team -->
+      <div id="fallAreaRed" class="relative flex-1 w-full overflow-hidden"></div>
+
+      <!-- Bottom Progress Dock for Red Team -->
+      <div class="px-3 sm:px-6 pb-3 pt-1 z-20">
+        <div class="bg-white/95 border-2 border-red-400 rounded-2xl px-3 py-2.5 shadow-md flex flex-col items-center justify-center min-h-[78px]">
+          <div class="text-[11px] sm:text-xs font-extrabold text-red-600 tracking-wider uppercase mb-1.5">
+            RED TEAM WORD PROGRESS 紅隊進度 (<span id="hintLabelRed" class="text-slate-600">蘋果</span>):
+          </div>
+          <div id="slotsRed" class="flex flex-wrap items-center justify-center gap-1.5"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- OVERLAY 1: START / LOBBY MODAL -->
+    <div id="startModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
+      <div class="bg-white border-4 border-amber-400 rounded-3xl max-w-2xl w-full p-5 sm:p-7 shadow-2xl flex flex-col items-center text-center animate-pop max-h-[92vh] overflow-y-auto">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 text-amber-800 font-extrabold text-xs mb-2">
+          <span>⚡ 雙人同螢幕紅藍PK賽 ⚡</span>
+        </div>
+        <h1 class="font-display text-3xl sm:text-5xl font-extrabold text-amber-500 tracking-tight drop-shadow-sm mb-2">
+          WORD DASH
+        </h1>
+        <p class="text-slate-600 font-bold text-sm sm:text-base max-w-lg mb-3">
+          在限時內點擊落下的正確球體完成單字練習！每局單字順序將<span class="text-sky-600 font-extrabold">隨機洗牌</span>！
+        </p>
+
+        <!-- Scoring Legend Pill -->
+        <div class="inline-flex flex-wrap items-center justify-center gap-2 sm:gap-3 bg-slate-50 border border-slate-200 px-4 py-2 rounded-full text-xs sm:text-sm font-bold mb-4">
+          <span class="text-amber-600">⭐ 星星 = +2 pts</span>
+          <span class="text-slate-300">|</span>
+          <span class="text-rose-600">💣 炸彈/點錯 = -1 pt</span>
+          <span class="text-slate-300">|</span>
+          <span class="text-emerald-600">🎯 完成單字獎勵 = +5 pts</span>
+        </div>
+
+        <!-- Mode & Time Settings Row -->
+        <div class="w-full grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 text-left">
+          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3">
+            <label class="block text-xs font-extrabold text-slate-500 uppercase mb-1.5">🎮 練習模式選擇</label>
+            <div class="grid grid-cols-2 gap-1.5">
+              <button type="button" id="modeBtnSpelling" class="px-2.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold border-2 transition bg-blue-600 text-white border-blue-600 shadow-sm">
+                🔤 字母拼字<br><span class="text-[11px] font-normal opacity-90">依序點擊字母</span>
+              </button>
+              <button type="button" id="modeBtnMatching" class="px-2.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold border-2 transition bg-white text-slate-700 border-slate-200 hover:bg-slate-100">
+                🎯 單字配對<br><span class="text-[11px] font-normal opacity-75">看提示抓整顆單字</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex flex-col justify-between">
+            <div>
+              <label class="block text-xs font-extrabold text-slate-500 uppercase mb-1.5">⏱️ 對戰時間 & 掉落速度</label>
+              <div class="flex items-center gap-1.5 mb-2">
+                <button type="button" data-time="40" class="time-preset-btn flex-1 py-1.5 rounded-lg text-xs font-extrabold border bg-white text-slate-700 border-slate-300">40秒</button>
+                <button type="button" data-time="60" class="time-preset-btn flex-1 py-1.5 rounded-lg text-xs font-extrabold border bg-amber-500 text-white border-amber-500">60秒</button>
+                <button type="button" data-time="90" class="time-preset-btn flex-1 py-1.5 rounded-lg text-xs font-extrabold border bg-white text-slate-700 border-slate-300">90秒</button>
+                <button type="button" data-time="120" class="time-preset-btn flex-1 py-1.5 rounded-lg text-xs font-extrabold border bg-white text-slate-700 border-slate-300">120秒</button>
+              </div>
+            </div>
+            <div class="flex items-center justify-between text-xs font-bold text-slate-600">
+              <span>掉落速度:</span>
+              <div class="flex gap-1">
+                <button type="button" data-speed="slow" class="speed-preset-btn px-2 py-0.5 rounded border bg-white text-slate-600 border-slate-300">慢</button>
+                <button type="button" data-speed="normal" class="speed-preset-btn px-2 py-0.5 rounded border bg-sky-600 text-white border-sky-600">適中</button>
+                <button type="button" data-speed="fast" class="speed-preset-btn px-2 py-0.5 rounded border bg-white text-slate-600 border-slate-300">快</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Target Word List Preview Box -->
+        <div class="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl p-3.5 mb-5 text-center">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs sm:text-sm font-extrabold text-amber-600">
+              📝 本局題庫單字 (<span id="lobbyWordCount">8</span> 個單字，隨機順序):
+            </span>
+            <button type="button" id="lobbyOpenUploadBtn" class="text-xs font-extrabold text-indigo-600 hover:text-indigo-800 underline">
+              📂 上傳 / 自訂題目
+            </button>
+          </div>
+          <div id="lobbyWordList" class="max-h-36 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs sm:text-sm font-bold text-emerald-700 px-2">
+          </div>
+        </div>
+
+        <!-- Ready Go Button -->
+        <button id="readyGoBtn" type="button" class="w-full sm:w-auto min-w-[260px] bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-display font-extrabold text-2xl sm:text-3xl py-3.5 px-10 rounded-2xl border-4 border-emerald-300 shadow-lg transition flex items-center justify-center gap-3">
+          <span>READY GO! 🚀</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- OVERLAY 2: UPLOAD / CUSTOMIZE QUESTIONS MODAL -->
+    <div id="uploadModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-[2px] z-50 hidden items-center justify-center p-4">
+      <div class="bg-white border-4 border-indigo-400 rounded-3xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl flex flex-col max-h-[92vh] animate-pop">
+        <div class="flex items-center justify-between border-b border-slate-200 pb-3 mb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">📂</span>
+            <div>
+              <h2 class="text-lg sm:text-xl font-extrabold text-slate-800">上傳與編輯單字題庫</h2>
+              <p class="text-xs text-slate-500">支援上傳 .txt / .csv 檔案，或直接在下方輸入單字</p>
+            </div>
+          </div>
+          <button id="closeUploadModalBtn" type="button" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-extrabold flex items-center justify-center">✕</button>
+        </div>
+
+        <!-- Upload File & Preset Buttons -->
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3 bg-indigo-50/70 border border-indigo-100 p-3 rounded-2xl">
+          <div class="flex flex-wrap items-center gap-2">
+            <label for="fileUploadInput" class="cursor-pointer inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-extrabold px-3.5 py-2 rounded-xl shadow-sm transition">
+              <span>📤 選擇檔案上傳 (.txt / .csv)</span>
+            </label>
+            <input id="fileUploadInput" type="file" accept=".txt,.csv" class="hidden">
+            <button id="downloadSampleBtn" type="button" class="text-xs font-bold text-indigo-700 hover:underline px-2 py-1">
+              ⬇️ 下載範例檔
+            </button>
+          </div>
+
+          <div class="flex items-center gap-1.5">
+            <span class="text-xs font-bold text-slate-500">快速範本:</span>
+            <button type="button" data-preset="animals" class="preset-vocab-btn text-xs font-bold bg-white hover:bg-slate-100 border border-slate-300 px-2.5 py-1 rounded-lg">動物</button>
+            <button type="button" data-preset="fruits" class="preset-vocab-btn text-xs font-bold bg-white hover:bg-slate-100 border border-slate-300 px-2.5 py-1 rounded-lg">水果</button>
+            <button type="button" data-preset="school" class="preset-vocab-btn text-xs font-bold bg-white hover:bg-slate-100 border border-slate-300 px-2.5 py-1 rounded-lg">校園</button>
+          </div>
+        </div>
+
+        <!-- Textarea Input -->
+        <div class="flex-1 flex flex-col min-h-0 mb-3">
+          <div class="flex items-center justify-between text-xs font-bold text-slate-600 mb-1">
+            <span>✏️ 每行一題，格式：<code class="bg-slate-100 px-1.5 py-0.5 rounded text-indigo-700">英文單字, 中文提示</code>（中文提示可省略）</span>
+            <span id="uploadStatusMsg" class="text-emerald-600 font-extrabold"></span>
+          </div>
+          <textarea id="vocabTextarea" rows="9" class="w-full flex-1 border-2 border-slate-300 focus:border-indigo-500 focus:outline-none rounded-2xl p-3 text-sm font-mono text-slate-800 bg-slate-50 resize-none" placeholder="apple, 蘋果&#10;banana, 香蕉&#10;elephant, 大象&#10;teacher, 老師"></textarea>
+        </div>
+
+        <!-- Actions Footer -->
+        <div class="flex items-center justify-between gap-3 pt-2 border-t border-slate-200">
+          <button id="clearVocabBtn" type="button" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 transition">
+            🗑️ 清空內容
+          </button>
+          <div class="flex items-center gap-2">
+            <button id="cancelUploadBtn" type="button" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-600 hover:bg-slate-100 border border-slate-300 transition">
+              取消
+            </button>
+            <button id="saveVocabBtn" type="button" class="px-6 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md transition">
+              ✅ 儲存並套用題庫
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OVERLAY 3: GAME OVER / WINNER MODAL -->
+    <div id="resultModal" class="fixed inset-0 bg-slate-900/45 backdrop-blur-[2px] z-50 hidden items-center justify-center p-4">
+      <div class="bg-white border-4 border-amber-400 rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl flex flex-col items-center text-center animate-pop">
+        
+        <div class="text-4xl sm:text-5xl mb-2">🏆</div>
+        <h2 id="winnerBannerText" class="font-display text-3xl sm:text-5xl font-extrabold tracking-tight mb-1 text-red-600">
+          RED TEAM WINS!
+        </h2>
+        <p id="winnerSubText" class="text-sm sm:text-base font-bold text-slate-500 mb-6">
+          恭喜紅隊獲得本場單字挑戰賽勝利！
+        </p>
+
+        <!-- Two Team Score Cards -->
+        <div class="w-full grid grid-cols-2 gap-4 mb-7">
+          <!-- Blue Team Final Card -->
+          <div id="finalCardBlue" class="bg-blue-50 border-2 border-blue-500 rounded-2xl p-4 flex flex-col items-center shadow-sm">
+            <div class="flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-blue-700 uppercase mb-1">
+              <span>BLUE TEAM 藍隊</span>
+              <span class="w-3 h-3 rounded-sm bg-blue-600 inline-block"></span>
+            </div>
+            <div class="font-display text-3xl sm:text-4xl font-extrabold text-blue-700 my-1">
+              <span id="finalScoreBlue">0</span> pts
+            </div>
+            <div class="text-xs font-bold text-slate-600 mt-1">
+              完成單字: <span id="finalWordsBlue" class="text-slate-900 font-extrabold">0</span>
+            </div>
+            <div class="text-xs font-bold text-slate-600 mt-0.5">
+              星星加分: <span id="finalStarsBlue" class="text-amber-600 font-extrabold">0</span>
+            </div>
+          </div>
+
+          <!-- Red Team Final Card -->
+          <div id="finalCardRed" class="bg-red-50 border-2 border-red-500 rounded-2xl p-4 flex flex-col items-center shadow-sm">
+            <div class="flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-red-700 uppercase mb-1">
+              <span>RED TEAM 紅隊</span>
+              <span class="w-3 h-3 rounded-sm bg-red-600 inline-block"></span>
+            </div>
+            <div class="font-display text-3xl sm:text-4xl font-extrabold text-red-600 my-1">
+              <span id="finalScoreRed">0</span> pts
+            </div>
+            <div class="text-xs font-bold text-slate-600 mt-1">
+              完成單字: <span id="finalWordsRed" class="text-slate-900 font-extrabold">0</span>
+            </div>
+            <div class="text-xs font-bold text-slate-600 mt-0.5">
+              星星加分: <span id="finalStarsRed" class="text-amber-600 font-extrabold">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Play Again & Change Words Buttons -->
+        <div class="flex flex-wrap items-center justify-center gap-3 w-full">
+          <button id="playAgainBtn" type="button" class="flex-1 min-w-[200px] bg-amber-400 hover:bg-amber-500 active:scale-95 text-slate-900 font-display font-extrabold text-xl sm:text-2xl py-3.5 px-8 rounded-2xl border-2 border-amber-300 shadow-md transition flex items-center justify-center gap-2">
+            <span>🔄 再挑戰一次 (PLAY AGAIN)</span>
+          </button>
+          <button id="resultEditWordsBtn" type="button" class="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm py-3.5 px-5 rounded-2xl border border-slate-300 transition">
+            📂 更換題目
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // ==========================================
+    // 1. DEFAULT & PRESET VOCABULARY BANKS
+    // ==========================================
+    const PRESET_BANKS = {
+      default: [
+        { word: 'apple', hint: '蘋果' },
+        { word: 'banana', hint: '香蕉' },
+        { word: 'orange', hint: '柳橙' },
+        { word: 'rabbit', hint: '兔子' },
+        { word: 'monkey', hint: '猴子' },
+        { word: 'school', hint: '學校' },
+        { word: 'pencil', hint: '鉛筆' },
+        { word: 'friend', hint: '朋友' }
+      ],
+      animals: [
+        { word: 'elephant', hint: '大象' },
+        { word: 'giraffe', hint: '長頸鹿' },
+        { word: 'dolphin', hint: '海豚' },
+        { word: 'penguin', hint: '企鵝' },
+        { word: 'rabbit', hint: '兔子' },
+        { word: 'monkey', hint: '猴子' },
+        { word: 'tiger', hint: '老虎' },
+        { word: 'lion', hint: '獅子' }
+      ],
+      fruits: [
+        { word: 'apple', hint: '蘋果' },
+        { word: 'banana', hint: '香蕉' },
+        { word: 'orange', hint: '柳橙' },
+        { word: 'grape', hint: '葡萄' },
+        { word: 'mango', hint: '芒果' },
+        { word: 'peach', hint: '水蜜桃' },
+        { word: 'lemon', hint: '檸檬' },
+        { word: 'guava', hint: '芭樂' }
+      ],
+      school: [
+        { word: 'teacher', hint: '老師' },
+        { word: 'student', hint: '學生' },
+        { word: 'pencil', hint: '鉛筆' },
+        { word: 'eraser', hint: '橡皮擦' },
+        { word: 'marker', hint: '麥克筆' },
+        { word: 'window', hint: '窗戶' },
+        { word: 'library', hint: '圖書館' },
+        { word: 'science', hint: '科學' }
+      ]
+    };
+
+    // ==========================================
+    // 2. SOUND SYNTHESIS (Web Audio API)
+    // ==========================================
+    let audioCtx = null;
+    let isMuted = false;
+
+    function initAudio() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          audioCtx = new AudioContextClass();
+        }
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playSound(type) {
+      if (isMuted) return;
+      initAudio();
+      if (!audioCtx) return;
+
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      if (type === 'correct') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, now); // C5
+        osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.11); // E5
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+        osc.start(now);
+        osc.stop(now + 0.14);
+      } else if (type === 'wordComplete') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.08);
+        osc.frequency.setValueAtTime(783.99, now + 0.16);
+        osc.frequency.setValueAtTime(1046.5, now + 0.24);
+        gain.gain.setValueAtTime(0.22, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
+        osc.start(now);
+        osc.stop(now + 0.42);
+      } else if (type === 'star') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(783.99, now);
+        osc.frequency.exponentialRampToValueAtTime(1318.5, now + 0.22);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+        osc.start(now);
+        osc.stop(now + 0.24);
+      } else if (type === 'wrong' || type === 'bomb') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(190, now);
+        osc.frequency.linearRampToValueAtTime(110, now + 0.22);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+        osc.start(now);
+        osc.stop(now + 0.24);
+      } else if (type === 'win') {
+        const notes = [523.25, 659.25, 783.99, 1046.5];
+        notes.forEach((freq, idx) => {
+          const o = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          o.type = 'triangle';
+          o.connect(g);
+          g.connect(audioCtx.destination);
+          o.frequency.setValueAtTime(freq, now + idx * 0.1);
+          g.gain.setValueAtTime(0.2, now + idx * 0.1);
+          g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.3);
+          o.start(now + idx * 0.1);
+          o.stop(now + idx * 0.1 + 0.3);
+        });
+      }
+    }
+
+    // ==========================================
+    // 3. GAME STATE
+    // ==========================================
+    let vocabList = [...PRESET_BANKS.default];
+    let gameMode = 'spelling'; // 'spelling' | 'matching'
+    let gameDuration = 60; // seconds
+    let speedPreset = 'normal'; // 'slow' | 'normal' | 'fast'
+
+    let isPlaying = false;
+    let timeLeft = 60;
+    let timerInterval = null;
+    let animationFrameId = null;
+    let lastFrameTime = 0;
+
+    let itemUidCounter = 1;
+
+    const teams = {
+      blue: {
+        id: 'blue',
+        score: 0,
+        solvedCount: 0,
+        starsPopped: 0,
+        wordQueue: [],
+        currentWordIndex: 0,
+        letterProgress: 0,
+        items: [],
+        spawnCooldown: 0
+      },
+      red: {
+        id: 'red',
+        score: 0,
+        solvedCount: 0,
+        starsPopped: 0,
+        wordQueue: [],
+        currentWordIndex: 0,
+        letterProgress: 0,
+        items: [],
+        spawnCooldown: 0
+      }
+    };
+
+    // ==========================================
+    // 4. HELPER UTILITIES
+    // ==========================================
+    function shuffleArray(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function getSpeedMultiplier() {
+      if (speedPreset === 'slow') return 0.72;
+      if (speedPreset === 'fast') return 1.38;
+      return 1.0;
+    }
+
+    function formatVocabToText(list) {
+      return list.map(item => item.hint ? `${item.word}, ${item.hint}` : item.word).join('\n');
+    }
+
+    function parseTextToVocab(rawText) {
+      const lines = rawText.split(/\r?\n/);
+      const parsed = [];
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        // Split by comma, tab, or pipe
+        const parts = trimmed.split(/[,，\t|]+/);
+        const rawWord = (parts[0] || '').trim();
+        const rawHint = parts.slice(1).join(' ').trim();
+        if (rawWord.length > 0) {
+          parsed.push({
+            word: rawWord,
+            hint: rawHint || ''
+          });
+        }
+      }
+      return parsed;
+    }
+
+    // ==========================================
+    // 5. UI SYNCHRONIZATION & LOBBY RENDER
+    // ==========================================
+    function renderLobbyWordList() {
+      const countEl = document.getElementById('lobbyWordCount');
+      const listEl = document.getElementById('lobbyWordList');
+      countEl.textContent = vocabList.length;
+      document.getElementById('totalWordsBlue').textContent = vocabList.length;
+      document.getElementById('totalWordsRed').textContent = vocabList.length;
+
+      listEl.innerHTML = '';
+      vocabList.forEach((item, idx) => {
+        const div = document.createElement('div');
+        div.className = 'truncate bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-left flex items-center justify-between';
+        const hintStr = item.hint ? `<span class="text-slate-500 text-xs ml-1">(${item.hint})</span>` : '';
+        div.innerHTML = `<span>${idx + 1}. <strong class="text-emerald-700">${item.word}</strong>${hintStr}</span>`;
+        listEl.appendChild(div);
+      });
+
+      // Also update preview target on header when idle
+      if (!isPlaying && vocabList.length > 0) {
+        updateTeamHeaderAndDock('blue');
+        updateTeamHeaderAndDock('red');
+      }
+    }
+
+    function getCurrentTarget(teamKey) {
+      const team = teams[teamKey];
+      if (!team.wordQueue || team.wordQueue.length === 0) {
+        return vocabList[0] || { word: 'apple', hint: '蘋果' };
+      }
+      return team.wordQueue[team.currentWordIndex % team.wordQueue.length];
+    }
+
+    function updateTeamHeaderAndDock(teamKey) {
+      const isBlue = teamKey === 'blue';
+      const target = getCurrentTarget(teamKey);
+      const team = teams[teamKey];
+
+      const topTargetEl = document.getElementById(isBlue ? 'topTargetBlue' : 'topTargetRed');
+      const topHintEl = document.getElementById(isBlue ? 'topHintBlue' : 'topHintRed');
+      const hintLabelEl = document.getElementById(isBlue ? 'hintLabelBlue' : 'hintLabelRed');
+      const slotsEl = document.getElementById(isBlue ? 'slotsBlue' : 'slotsRed');
+
+      if (gameMode === 'spelling') {
+        topTargetEl.textContent = target.word;
+        topHintEl.textContent = target.hint ? `(${target.hint})` : '';
+        hintLabelEl.textContent = target.hint ? `${target.word} ${target.hint}` : target.word;
+      } else {
+        // In matching mode, show Chinese hint (or cloze) at top so players find the English word bubble
+        if (target.hint) {
+          topTargetEl.textContent = target.hint;
+          topHintEl.textContent = '(請點擊對應英文單字)';
+          hintLabelEl.textContent = `目標提示：${target.hint}`;
+        } else {
+          topTargetEl.textContent = target.word;
+          topHintEl.textContent = '(請點擊相同單字)';
+          hintLabelEl.textContent = `目標單字：${target.word}`;
+        }
+      }
+
+      // Render bottom progress slots
+      slotsEl.innerHTML = '';
+      if (gameMode === 'spelling') {
+        const chars = target.word.split('');
+        chars.forEach((ch, idx) => {
+          const box = document.createElement('div');
+          const solved = idx < team.letterProgress;
+          if (solved) {
+            box.className = `slot-box ${isBlue ? 'bg-blue-600 text-white border-2 border-blue-700' : 'bg-red-600 text-white border-2 border-red-700'} animate-pop`;
+            box.textContent = ch;
+          } else if (ch === ' ') {
+            box.className = 'slot-box bg-slate-200 text-slate-500 border border-slate-300';
+            box.textContent = '␣';
+          } else {
+            box.className = `slot-box bg-slate-100 text-slate-400 border-2 border-dashed ${isBlue ? 'border-blue-300' : 'border-red-300'}`;
+            box.textContent = '_';
+          }
+          slotsEl.appendChild(box);
+        });
+      } else {
+        // Matching mode single slot box
+        const box = document.createElement('div');
+        box.className = `px-5 py-1.5 rounded-xl font-display font-extrabold text-base sm:text-lg border-2 border-dashed ${isBlue ? 'border-blue-300 bg-blue-50/50 text-blue-700' : 'border-red-300 bg-red-50/50 text-red-700'}`;
+        box.textContent = target.hint ? `請尋找「${target.hint}」的英文單字球` : `請尋找「${target.word}」單字球`;
+        slotsEl.appendChild(box);
+      }
+    }
+
+    function updateScoreHUD(teamKey) {
+      const team = teams[teamKey];
+      if (teamKey === 'blue') {
+        document.getElementById('scoreBlue').textContent = team.score;
+        document.getElementById('solvedBlue').textContent = team.solvedCount;
+      } else {
+        document.getElementById('scoreRed').textContent = team.score;
+        document.getElementById('solvedRed').textContent = team.solvedCount;
+      }
+    }
+
+    function showFloatingFeedback(teamKey, x, y, text, colorClass) {
+      const area = document.getElementById(teamKey === 'blue' ? 'fallAreaBlue' : 'fallAreaRed');
+      const el = document.createElement('div');
+      el.className = `float-feedback ${colorClass}`;
+      el.style.left = `${Math.max(16, Math.min(area.clientWidth - 70, x))}px`;
+      el.style.top = `${Math.max(16, y)}px`;
+      el.textContent = text;
+      area.appendChild(el);
+      setTimeout(() => {
+        if (el.parentNode) el.parentNode.removeChild(el);
+      }, 750);
+    }
+
+    // ==========================================
+    // 6. SPAWNING & FALLING ITEMS LOGIC
+    // ==========================================
+    function clearAllFallingItems() {
+      ['blue', 'red'].forEach(key => {
+        teams[key].items.forEach(item => {
+          if (item.el && item.el.parentNode) {
+            item.el.parentNode.removeChild(item.el);
+          }
+        });
+        teams[key].items = [];
+      });
+    }
+
+    function spawnItemForTeam(teamKey) {
+      const team = teams[teamKey];
+      const area = document.getElementById(teamKey === 'blue' ? 'fallAreaBlue' : 'fallAreaRed');
+      if (!area) return;
+      const areaWidth = area.clientWidth || 320;
+
+      const target = getCurrentTarget(teamKey);
+      const roll = Math.random();
+
+      let itemType = 'target'; // 'target' | 'decoy' | 'star' | 'bomb'
+      let label = '';
+
+      // Check if an active needed target is already on screen
+      let neededValue = '';
+      if (gameMode === 'spelling') {
+        // Skip spaces automatically if any
+        while (
+          team.letterProgress < target.word.length &&
+          target.word[team.letterProgress] === ' '
+        ) {
+          team.letterProgress++;
+        }
+        neededValue = target.word[team.letterProgress] || target.word[0];
+      } else {
+        neededValue = target.word;
+      }
+
+      const hasNeededOnScreen = team.items.some(
+        it => it.itemType === 'target' && it.value.toLowerCase() === neededValue.toLowerCase()
+      );
+
+      if (!hasNeededOnScreen || roll < 0.48) {
+        itemType = 'target';
+        label = neededValue;
+      } else if (roll < 0.78) {
+        itemType = 'decoy';
+        if (gameMode === 'spelling') {
+          const alphabet = 'abcdefghijklmnopqrstuvwxyz';
+          const wordChars = target.word.split('').filter(c => c !== ' ');
+          // Either another letter from the word or random letter
+          if (wordChars.length > 1 && Math.random() < 0.5) {
+            const candidates = wordChars.filter(c => c.toLowerCase() !== neededValue.toLowerCase());
+            label = candidates.length > 0
+              ? candidates[Math.floor(Math.random() * candidates.length)]
+              : alphabet[Math.floor(Math.random() * alphabet.length)];
+          } else {
+            let randChar = alphabet[Math.floor(Math.random() * alphabet.length)];
+            if (randChar.toLowerCase() === neededValue.toLowerCase()) randChar = 'z';
+            label = randChar;
+          }
+        } else {
+          // Matching mode decoy word
+          const otherWords = vocabList
+            .map(v => v.word)
+            .filter(w => w.toLowerCase() !== neededValue.toLowerCase());
+          if (otherWords.length > 0) {
+            label = otherWords[Math.floor(Math.random() * otherWords.length)];
+          } else {
+            const fallbackDecoys = ['water', 'happy', 'music', 'sunny', 'tiger'];
+            label = fallbackDecoys[Math.floor(Math.random() * fallbackDecoys.length)];
+          }
+        }
+      } else if (roll < 0.90) {
+        itemType = 'star';
+        label = '⭐';
+      } else {
+        itemType = 'bomb';
+        label = '💣';
+      }
+
+      const el = document.createElement('button');
+      el.type = 'button';
+      const uid = itemUidCounter++;
+
+      if (itemType === 'star') {
+        el.className = 'falling-item bubble-star w-12 h-12 sm:w-14 sm:h-14 rounded-full text-xl sm:text-2xl';
+        el.textContent = '⭐';
+      } else if (itemType === 'bomb') {
+        el.className = 'falling-item bubble-bomb w-12 h-12 sm:w-14 sm:h-14 rounded-full text-xl sm:text-2xl';
+        el.textContent = '💣';
+      } else {
+        const colorClass = teamKey === 'blue' ? 'bubble-blue' : 'bubble-red';
+        if (gameMode === 'spelling') {
+          el.className = `falling-item ${colorClass} w-12 h-12 sm:w-14 sm:h-14 rounded-full font-display text-xl sm:text-2xl`;
+        } else {
+          el.className = `falling-item ${colorClass} px-4 py-2 sm:px-5 sm:py-2.5 rounded-full font-display text-base sm:text-xl whitespace-nowrap`;
+        }
+        el.textContent = label;
+      }
+
+      const estimatedWidth = gameMode === 'spelling' || itemType === 'star' || itemType === 'bomb' ? 58 : Math.min(180, Math.max(85, label.length * 16 + 34));
+      const minX = 12;
+      const maxX = Math.max(minX + 10, areaWidth - estimatedWidth - 12);
+      const x = Math.floor(minX + Math.random() * (maxX - minX));
+      const y = -60;
+
+      const baseSpeed = (68 + Math.random() * 42) * getSpeedMultiplier();
+
+      el.style.left = `${x}px`;
+      el.style.top = `${y}px`;
+
+      const itemObj = {
+        uid,
+        teamKey,
+        itemType,
+        value: label,
+        x,
+        y,
+        speed: baseSpeed,
+        el
+      };
+
+      const handleTap = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isPlaying) return;
+        onItemClicked(teamKey, itemObj);
+      };
+
+      el.addEventListener('pointerdown', handleTap);
+      area.appendChild(el);
+      team.items.push(itemObj);
+    }
+
+    function onItemClicked(teamKey, itemObj) {
+      const team = teams[teamKey];
+      const idx = team.items.findIndex(it => it.uid === itemObj.uid);
+      if (idx === -1) return;
+
+      // Remove element immediately
+      team.items.splice(idx, 1);
+      if (itemObj.el && itemObj.el.parentNode) {
+        itemObj.el.parentNode.removeChild(itemObj.el);
+      }
+
+      const target = getCurrentTarget(teamKey);
+
+      if (itemObj.itemType === 'star') {
+        team.score += 2;
+        team.starsPopped += 1;
+        playSound('star');
+        showFloatingFeedback(teamKey, itemObj.x, itemObj.y, '⭐ +2', 'text-amber-500');
+        updateScoreHUD(teamKey);
+        return;
+      }
+
+      if (itemObj.itemType === 'bomb') {
+        team.score = Math.max(0, team.score - 1);
+        playSound('bomb');
+        showFloatingFeedback(teamKey, itemObj.x, itemObj.y, '💥 -1', 'text-rose-600');
+        updateScoreHUD(teamKey);
+        return;
+      }
+
+      // Word / Letter evaluation
+      if (gameMode === 'spelling') {
+        const expectedChar = target.word[team.letterProgress] || '';
+        if (itemObj.value.toLowerCase() === expectedChar.toLowerCase()) {
+          team.score += 1;
+          team.letterProgress += 1;
+          // Auto-skip spaces
+          while (
+            team.letterProgress < target.word.length &&
+            target.word[team.letterProgress] === ' '
+          ) {
+            team.letterProgress += 1;
+          }
+
+          if (team.letterProgress >= target.word.length) {
+            // Completed whole word!
+            team.score += 5;
+            team.solvedCount += 1;
+            team.currentWordIndex += 1;
+            team.letterProgress = 0;
+            playSound('wordComplete');
+            showFloatingFeedback(teamKey, itemObj.x, itemObj.y, '🎉 單字完成 +6!', 'text-emerald-600');
+          } else {
+            playSound('correct');
+            showFloatingFeedback(teamKey, itemObj.x, itemObj.y, '+1', teamKey === 'blue' ? 'text-blue-600' : 'text-red-600');
+          }
+          updateScoreHUD(teamKey);
+          updateTeamHeaderAndDock(teamKey);
+        } else {
+          team.score = Math.max(0, team.score - 1);
+          playSound('wrong');
+          showFloatingFeedback(teamKey, itemObj.x, itemObj.y, '✕ -1', 'text-rose-500');
+          updateScoreHUD(teamKey);
+        }
+      } else {
+        // Matching mode
+        if (itemObj.value.toLowerCase() === target.word.toLowerCase()) {
+          team.score += 5;
+          team.solvedCount += 1;
+          team.currentWordIndex += 1;
+          playSound('wordComplete');
+          showFloatingFeedback(teamKey, itemObj.x, itemObj.y, '🎯 答對 +5!', 'text-emerald-600');
+          updateScoreHUD(teamKey);
+          updateTeamHeaderAndDock(teamKey);
+        } else {
+          team.score = Math.max(0, team.score - 1);
+          playSound('wrong');
+          showFloatingFeedback(teamKey, itemObj.x, itemObj.y, '✕ -1', 'text-rose-500');
+          updateScoreHUD(teamKey);
+        }
+      }
+    }
+
+    // ==========================================
+    // 7. MAIN GAME LOOP & TIMER
+    // ==========================================
+    function startGame() {
+      initAudio();
+      if (vocabList.length === 0) {
+        vocabList = [...PRESET_BANKS.default];
+      }
+
+      // Close modals
+      document.getElementById('startModal').classList.add('hidden');
+      document.getElementById('startModal').classList.remove('flex');
+      document.getElementById('resultModal').classList.add('hidden');
+      document.getElementById('resultModal').classList.remove('flex');
+      document.getElementById('uploadModal').classList.add('hidden');
+      document.getElementById('uploadModal').classList.remove('flex');
+
+      // Reset timers & loops
+      if (timerInterval) clearInterval(timerInterval);
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      clearAllFallingItems();
+
+      timeLeft = gameDuration;
+      document.getElementById('timerDisplay').textContent = `${timeLeft}s`;
+
+      // Reset Blue & Red teams with shuffled queues
+      ['blue', 'red'].forEach(key => {
+        teams[key].score = 0;
+        teams[key].solvedCount = 0;
+        teams[key].starsPopped = 0;
+        teams[key].wordQueue = shuffleArray(vocabList);
+        teams[key].currentWordIndex = 0;
+        teams[key].letterProgress = 0;
+        teams[key].items = [];
+        teams[key].spawnCooldown = 0.2;
+        updateScoreHUD(key);
+        updateTeamHeaderAndDock(key);
+      });
+
+      isPlaying = true;
+      lastFrameTime = performance.now();
+
+      timerInterval = setInterval(() => {
+        if (!isPlaying) return;
+        timeLeft -= 1;
+        if (timeLeft <= 0) {
+          timeLeft = 0;
+          document.getElementById('timerDisplay').textContent = '0s';
+          endGame();
+        } else {
+          document.getElementById('timerDisplay').textContent = `${timeLeft}s`;
+        }
+      }, 1000);
+
+      animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function gameLoop(now) {
+      if (!isPlaying) return;
+      const dt = Math.min(0.1, (now - lastFrameTime) / 1000);
+      lastFrameTime = now;
+
+      ['blue', 'red'].forEach(key => {
+        const team = teams[key];
+        const area = document.getElementById(key === 'blue' ? 'fallAreaBlue' : 'fallAreaRed');
+        const areaHeight = area ? area.clientHeight : 500;
+
+        // Spawn timer
+        team.spawnCooldown -= dt;
+        if (team.spawnCooldown <= 0 && team.items.length < 9) {
+          spawnItemForTeam(key);
+          const baseInterval = gameMode === 'spelling' ? 0.72 : 0.92;
+          team.spawnCooldown = (baseInterval + Math.random() * 0.35) / getSpeedMultiplier();
+        }
+
+        // Update positions
+        for (let i = team.items.length - 1; i >= 0; i--) {
+          const item = team.items[i];
+          item.y += item.speed * dt;
+          if (item.el) {
+            item.el.style.top = `${item.y}px`;
+          }
+          if (item.y > areaHeight + 60) {
+            if (item.el && item.el.parentNode) {
+              item.el.parentNode.removeChild(item.el);
+            }
+            team.items.splice(i, 1);
+          }
+        }
+      });
+
+      animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function endGame() {
+      isPlaying = false;
+      if (timerInterval) clearInterval(timerInterval);
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      clearAllFallingItems();
+
+      playSound('win');
+
+      const blueScore = teams.blue.score;
+      const redScore = teams.red.score;
+
+      document.getElementById('finalScoreBlue').textContent = blueScore;
+      document.getElementById('finalWordsBlue').textContent = teams.blue.solvedCount;
+      document.getElementById('finalStarsBlue').textContent = teams.blue.starsPopped;
+
+      document.getElementById('finalScoreRed').textContent = redScore;
+      document.getElementById('finalWordsRed').textContent = teams.red.solvedCount;
+      document.getElementById('finalStarsRed').textContent = teams.red.starsPopped;
+
+      const bannerEl = document.getElementById('winnerBannerText');
+      const subEl = document.getElementById('winnerSubText');
+      const cardBlue = document.getElementById('finalCardBlue');
+      const cardRed = document.getElementById('finalCardRed');
+
+      cardBlue.classList.remove('ring-4', 'ring-amber-400');
+      cardRed.classList.remove('ring-4', 'ring-amber-400');
+
+      if (blueScore > redScore) {
+        bannerEl.textContent = 'BLUE TEAM WINS! 藍隊獲勝！';
+        bannerEl.className = 'font-display text-3xl sm:text-4xl font-extrabold tracking-tight mb-1 text-blue-600';
+        subEl.textContent = `藍隊以 ${blueScore} 分擊敗紅隊 ${redScore} 分，奪得勝利！`;
+        cardBlue.classList.add('ring-4', 'ring-amber-400');
+      } else if (redScore > blueScore) {
+        bannerEl.textContent = 'RED TEAM WINS! 紅隊獲勝！';
+        bannerEl.className = 'font-display text-3xl sm:text-4xl font-extrabold tracking-tight mb-1 text-red-600';
+        subEl.textContent = `紅隊以 ${redScore} 分擊敗藍隊 ${blueScore} 分，奪得勝利！`;
+        cardRed.classList.add('ring-4', 'ring-amber-400');
+      } else {
+        bannerEl.textContent = "IT'S A TIE! 雙方平手！";
+        bannerEl.className = 'font-display text-3xl sm:text-4xl font-extrabold tracking-tight mb-1 text-amber-500';
+        subEl.textContent = `勢均力敵！紅藍雙隊同為 ${blueScore} 分！`;
+      }
+
+      const resultModal = document.getElementById('resultModal');
+      resultModal.classList.remove('hidden');
+      resultModal.classList.add('flex');
+    }
+
+    // ==========================================
+    // 8. EVENT LISTENERS & CONTROLS
+    // ==========================================
+    window.addEventListener('DOMContentLoaded', () => {
+      renderLobbyWordList();
+
+      // Mode buttons
+      const modeBtnSpelling = document.getElementById('modeBtnSpelling');
+      const modeBtnMatching = document.getElementById('modeBtnMatching');
+      const currentModeLabel = document.getElementById('currentModeLabel');
+
+      function setMode(newMode) {
+        gameMode = newMode;
+        if (gameMode === 'spelling') {
+          modeBtnSpelling.className = 'px-2.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold border-2 transition bg-blue-600 text-white border-blue-600 shadow-sm';
+          modeBtnMatching.className = 'px-2.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold border-2 transition bg-white text-slate-700 border-slate-200 hover:bg-slate-100';
+          currentModeLabel.textContent = '單字拼字對戰 (Spelling Dash)';
+        } else {
+          modeBtnMatching.className = 'px-2.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold border-2 transition bg-blue-600 text-white border-blue-600 shadow-sm';
+          modeBtnSpelling.className = 'px-2.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold border-2 transition bg-white text-slate-700 border-slate-200 hover:bg-slate-100';
+          currentModeLabel.textContent = '中英單字配對 (Word Match)';
+        }
+        updateTeamHeaderAndDock('blue');
+        updateTeamHeaderAndDock('red');
+      }
+
+      modeBtnSpelling.addEventListener('click', () => setMode('spelling'));
+      modeBtnMatching.addEventListener('click', () => setMode('matching'));
+
+      // Time preset buttons
+      document.querySelectorAll('.time-preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          gameDuration = parseInt(btn.getAttribute('data-time'), 10) || 60;
+          document.getElementById('timerDisplay').textContent = `${gameDuration}s`;
+          document.querySelectorAll('.time-preset-btn').forEach(b => {
+            b.className = 'time-preset-btn flex-1 py-1.5 rounded-lg text-xs font-extrabold border bg-white text-slate-700 border-slate-300';
+          });
+          btn.className = 'time-preset-btn flex-1 py-1.5 rounded-lg text-xs font-extrabold border bg-amber-500 text-white border-amber-500';
+        });
+      });
+
+      // Speed preset buttons
+      document.querySelectorAll('.speed-preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          speedPreset = btn.getAttribute('data-speed') || 'normal';
+          document.querySelectorAll('.speed-preset-btn').forEach(b => {
+            b.className = 'speed-preset-btn px-2 py-0.5 rounded border bg-white text-slate-600 border-slate-300';
+          });
+          btn.className = 'speed-preset-btn px-2 py-0.5 rounded border bg-sky-600 text-white border-sky-600';
+        });
+      });
+
+      // Mute toggle
+      const muteToggleBtn = document.getElementById('muteToggleBtn');
+      muteToggleBtn.addEventListener('click', () => {
+        isMuted = !isMuted;
+        muteToggleBtn.textContent = isMuted ? '🔇 音效: 關' : '🔊 音效: 開';
+      });
+
+      // Ready Go & Play Again
+      document.getElementById('readyGoBtn').addEventListener('click', startGame);
+      document.getElementById('playAgainBtn').addEventListener('click', startGame);
+
+      // Open Settings / Home Modal
+      document.getElementById('openHomeModalBtn').addEventListener('click', () => {
+        isPlaying = false;
+        if (timerInterval) clearInterval(timerInterval);
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        clearAllFallingItems();
+        document.getElementById('resultModal').classList.add('hidden');
+        document.getElementById('resultModal').classList.remove('flex');
+        const startModal = document.getElementById('startModal');
+        startModal.classList.remove('hidden');
+        startModal.classList.add('flex');
+      });
+
+      // Upload / Edit Modal Logic
+      const uploadModal = document.getElementById('uploadModal');
+      const vocabTextarea = document.getElementById('vocabTextarea');
+      const uploadStatusMsg = document.getElementById('uploadStatusMsg');
+
+      function openUploadModal() {
+        isPlaying = false;
+        if (timerInterval) clearInterval(timerInterval);
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        clearAllFallingItems();
+        vocabTextarea.value = formatVocabToText(vocabList);
+        uploadStatusMsg.textContent = `目前共 ${vocabList.length} 個單字`;
+        uploadModal.classList.remove('hidden');
+        uploadModal.classList.add('flex');
+      }
+
+      function closeUploadModal() {
+        uploadModal.classList.add('hidden');
+        uploadModal.classList.remove('flex');
+        // Ensure startModal is visible if game not running
+        if (!isPlaying && document.getElementById('resultModal').classList.contains('hidden')) {
+          const startModal = document.getElementById('startModal');
+          startModal.classList.remove('hidden');
+          startModal.classList.add('flex');
+        }
+      }
+
+      document.getElementById('openUploadModalBtn').addEventListener('click', openUploadModal);
+      document.getElementById('lobbyOpenUploadBtn').addEventListener('click', openUploadModal);
+      document.getElementById('resultEditWordsBtn').addEventListener('click', () => {
+        document.getElementById('resultModal').classList.add('hidden');
+        document.getElementById('resultModal').classList.remove('flex');
+        openUploadModal();
+      });
+      document.getElementById('closeUploadModalBtn').addEventListener('click', closeUploadModal);
+      document.getElementById('cancelUploadBtn').addEventListener('click', closeUploadModal);
+
+      // File upload handler (.txt / .csv)
+      const fileUploadInput = document.getElementById('fileUploadInput');
+      fileUploadInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const content = evt.target.result || '';
+          vocabTextarea.value = content.trim();
+          const parsed = parseTextToVocab(content);
+          uploadStatusMsg.textContent = `已讀取檔案「${file.name}」(${parsed.length} 個單字)`;
+          fileUploadInput.value = '';
+        };
+        reader.readAsText(file, 'UTF-8');
+      });
+
+      // Download sample file
+      document.getElementById('downloadSampleBtn').addEventListener('click', () => {
+        const sampleContent = "apple, 蘋果\nbanana, 香蕉\norange, 柳橙\nelephant, 大象\nrabbit, 兔子\nteacher, 老師\nstudent, 學生\nfriend, 朋友";
+        const blob = new Blob([sampleContent], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'word_dash_sample.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+
+      // Preset category buttons inside Upload Modal
+      document.querySelectorAll('.preset-vocab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const key = btn.getAttribute('data-preset');
+          if (PRESET_BANKS[key]) {
+            vocabTextarea.value = formatVocabToText(PRESET_BANKS[key]);
+            uploadStatusMsg.textContent = `已載入範本 (${PRESET_BANKS[key].length} 個單字)`;
+          }
+        });
+      });
+
+      // Clear button
+      document.getElementById('clearVocabBtn').addEventListener('click', () => {
+        vocabTextarea.value = '';
+        uploadStatusMsg.textContent = '已清空，請輸入至少 1 個單字';
+      });
+
+      // Save Vocab button
+      document.getElementById('saveVocabBtn').addEventListener('click', () => {
+        const parsed = parseTextToVocab(vocabTextarea.value);
+        if (parsed.length === 0) {
+          uploadStatusMsg.textContent = '⚠️ 請至少輸入一個有效單字！';
+          uploadStatusMsg.className = 'text-rose-600 font-extrabold';
+          return;
+        }
+        vocabList = parsed;
+        uploadStatusMsg.className = 'text-emerald-600 font-extrabold';
+        renderLobbyWordList();
+        closeUploadModal();
+      });
+    });
+  </script>
+</body>
+</html>
